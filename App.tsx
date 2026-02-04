@@ -12,28 +12,44 @@ import { generateDraft } from './services/gemini';
 const App: React.FC = () => {
   const [view, setView] = useState<View>('home');
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(storage.getAuth());
-  const [posts, setPosts] = useState<Post[]>(storage.getPosts());
-  const [ads, setAds] = useState<Ad[]>(storage.getAds());
-  const [lastAutoUpdate, setLastAutoUpdate] = useState(storage.getLastAutoUpdate());
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [lastAutoUpdate, setLastAutoUpdate] = useState(0);
 
-  // Google AdSense Initialization
+  // Initialize data with safety
   useEffect(() => {
-    const settings = storage.getSettings();
-    if (settings.adSenseEnabled && settings.adSenseClientId) {
-      const existingScript = document.getElementById('adsense-script');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.id = 'adsense-script';
-        script.async = true;
-        script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${settings.adSenseClientId}`;
-        script.crossOrigin = 'anonymous';
-        document.head.appendChild(script);
-      }
+    try {
+      setIsLoggedIn(storage.getAuth());
+      setPosts(storage.getPosts());
+      setAds(storage.getAds());
+      setLastAutoUpdate(storage.getLastAutoUpdate());
+    } catch (e) {
+      console.error("Storage initialization error:", e);
     }
   }, []);
 
-  // Autonomous Content Loop
+  // AdSense Injection with try-catch safety
+  useEffect(() => {
+    try {
+      const settings = storage.getSettings();
+      if (settings.adSenseEnabled && settings.adSenseClientId) {
+        const existingScript = document.getElementById('adsense-script');
+        if (!existingScript) {
+          const script = document.createElement('script');
+          script.id = 'adsense-script';
+          script.async = true;
+          script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${settings.adSenseClientId}`;
+          script.crossOrigin = 'anonymous';
+          document.head.appendChild(script);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to inject AdSense script", e);
+    }
+  }, []);
+
+  // Autonomous Pilot Loop
   useEffect(() => {
     const runAutoPilot = async () => {
       const now = Date.now();
@@ -53,23 +69,21 @@ const App: React.FC = () => {
               published: true,
               createdAt: now,
               author: 'AI Analyst',
-              metaDescription: draft.metaDescription,
-              metaKeywords: draft.metaKeywords,
               groundingUrls: draft.groundingUrls
             };
-            const updatedPosts = [newPost, ...storage.getPosts()];
-            storage.savePosts(updatedPosts);
-            setPosts(updatedPosts);
+            const updated = [newPost, ...storage.getPosts()];
+            storage.savePosts(updated);
+            setPosts(updated);
             storage.setLastAutoUpdate(now);
             setLastAutoUpdate(now);
           }
         } catch (error) {
-          console.error("AI Generation failed:", error);
+          console.error("AutoPilot failed:", error);
         }
       }
     };
-    runAutoPilot();
-  }, [lastAutoUpdate]);
+    if (posts.length > 0) runAutoPilot();
+  }, [lastAutoUpdate, posts.length]);
 
   const handleNavigate = useCallback((newView: View, params?: any) => {
     if (newView === 'post' && params?.post) {
@@ -200,7 +214,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="bg-black border-t border-gray-900 py-16 mt-20 text-center md:text-left">
+      <footer className="bg-black border-t border-gray-900 py-16 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-10">
           <div>
             <div className="flex items-center gap-3 justify-center md:justify-start mb-4">
@@ -210,9 +224,10 @@ const App: React.FC = () => {
             <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.5em]">Global Singularity Monitoring</p>
           </div>
           <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-gray-500">
-             <button onClick={() => handleNavigate('home')} className="hover:text-indigo-400">Index</button>
-             <button onClick={() => handleNavigate('ai')} className="hover:text-indigo-400">Neural</button>
-             <button onClick={() => handleNavigate('dev')} className="hover:text-indigo-400">Syntax</button>
+             <button onClick={() => handleNavigate('home')} className="hover:text-white transition-colors">Index</button>
+             <button onClick={() => handleNavigate('ai')} className="hover:text-white transition-colors">Neural</button>
+             <button onClick={() => handleNavigate('dev')} className="hover:text-white transition-colors">Syntax</button>
+             <button onClick={() => handleNavigate('future')} className="hover:text-white transition-colors">Beyond</button>
           </div>
         </div>
       </footer>
