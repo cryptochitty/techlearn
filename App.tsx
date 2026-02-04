@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Post, Ad, View } from './types';
 import { storage } from './services/storage';
 import { Navbar } from './components/Navbar';
@@ -16,21 +16,30 @@ const App: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [lastAutoUpdate, setLastAutoUpdate] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize data with safety
+  // Initialize data safely
   useEffect(() => {
     try {
-      setIsLoggedIn(storage.getAuth());
-      setPosts(storage.getPosts());
-      setAds(storage.getAds());
-      setLastAutoUpdate(storage.getLastAutoUpdate());
+      const initialPosts = storage.getPosts();
+      const initialAds = storage.getAds();
+      const initialAuth = storage.getAuth();
+      const initialUpdate = storage.getLastAutoUpdate();
+      
+      setPosts(initialPosts);
+      setAds(initialAds);
+      setIsLoggedIn(initialAuth);
+      setLastAutoUpdate(initialUpdate);
+      setIsInitialized(true);
     } catch (e) {
-      console.error("Storage initialization error:", e);
+      console.error("Critical initialization failure:", e);
+      setIsInitialized(true); // Proceed anyway to show empty/fallback state
     }
   }, []);
 
-  // AdSense Injection with try-catch safety
+  // AdSense Injection
   useEffect(() => {
+    if (!isInitialized) return;
     try {
       const settings = storage.getSettings();
       if (settings.adSenseEnabled && settings.adSenseClientId) {
@@ -45,12 +54,14 @@ const App: React.FC = () => {
         }
       }
     } catch (e) {
-      console.warn("Failed to inject AdSense script", e);
+      console.warn("AdSense setup bypassed", e);
     }
-  }, []);
+  }, [isInitialized]);
 
-  // Autonomous Pilot Loop
+  // AI Content Cycle
   useEffect(() => {
+    if (!isInitialized || posts.length === 0) return;
+    
     const runAutoPilot = async () => {
       const now = Date.now();
       const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -68,7 +79,7 @@ const App: React.FC = () => {
               coverImage: `https://picsum.photos/seed/${Math.random()}/1200/600`,
               published: true,
               createdAt: now,
-              author: 'AI Analyst',
+              author: 'AI Specialist',
               groundingUrls: draft.groundingUrls
             };
             const updated = [newPost, ...storage.getPosts()];
@@ -78,12 +89,12 @@ const App: React.FC = () => {
             setLastAutoUpdate(now);
           }
         } catch (error) {
-          console.error("AutoPilot failed:", error);
+          console.error("AI Generation failed:", error);
         }
       }
     };
-    if (posts.length > 0) runAutoPilot();
-  }, [lastAutoUpdate, posts.length]);
+    runAutoPilot();
+  }, [isInitialized, lastAutoUpdate, posts.length]);
 
   const handleNavigate = useCallback((newView: View, params?: any) => {
     if (newView === 'post' && params?.post) {
@@ -123,11 +134,13 @@ const App: React.FC = () => {
       ? posts.filter(p => p.published && p.category === categoryFilter)
       : posts.filter(p => p.published);
 
+    const themeColor = title === 'neural' ? 'indigo' : title === 'syntax' ? 'emerald' : title === 'beyond' ? 'purple' : 'indigo';
+
     return (
-      <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
         <div className="border-b border-gray-900 pb-10">
           <h1 className="text-6xl font-black lowercase tracking-tighter text-white mb-2">
-            {title}<span className="text-indigo-600">.</span>
+            {title}<span className={`text-${themeColor}-600`}>.</span>
           </h1>
           <p className="text-gray-500 font-black uppercase tracking-[0.4em] text-[10px]">
             {tag}
@@ -139,7 +152,7 @@ const App: React.FC = () => {
             {filtered.map(post => (
               <article 
                 key={post.id} 
-                className="group cursor-pointer bg-gray-900/30 border border-gray-800 rounded-[3rem] overflow-hidden hover:border-indigo-500/30 transition-all duration-500"
+                className={`group cursor-pointer bg-gray-900/30 border border-gray-800 rounded-[3rem] overflow-hidden hover:border-${themeColor}-500/30 transition-all duration-500`}
                 onClick={() => handleNavigate('post', { post })}
               >
                 <div className="aspect-[16/10] overflow-hidden relative">
@@ -151,21 +164,27 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="p-10">
-                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-3">{new Date(post.createdAt).toDateString()}</span>
-                  <h2 className="text-2xl font-black text-white group-hover:text-indigo-400 transition-colors leading-tight mb-4">{post.title}</h2>
+                  <span className={`text-[10px] font-black text-${themeColor}-400 uppercase tracking-widest block mb-3`}>
+                    {new Date(post.createdAt).toDateString()}
+                  </span>
+                  <h2 className={`text-2xl font-black text-white group-hover:text-${themeColor}-400 transition-colors leading-tight mb-4`}>
+                    {post.title}
+                  </h2>
                   <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{post.excerpt}</p>
                 </div>
               </article>
             ))}
           </div>
         ) : (
-          <div className="py-20 text-center bg-gray-900/20 border border-gray-800 rounded-[3rem]">
-            <p className="text-gray-600 font-bold uppercase tracking-widest text-xs">No entries found in the {title} archives.</p>
+          <div className="py-24 text-center bg-gray-900/10 border border-dashed border-gray-800 rounded-[3rem]">
+            <p className="text-gray-600 font-black uppercase tracking-widest text-xs">Archives currently quiet.</p>
           </div>
         )}
       </div>
     );
   };
+
+  if (!isInitialized) return <div className="min-h-screen bg-[#050505] flex items-center justify-center font-black text-white tracking-widest uppercase text-xs">Syncing Terminal...</div>;
 
   const headerAd = ads.find(a => a.position === 'header' && a.active);
 
@@ -214,20 +233,30 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="bg-black border-t border-gray-900 py-16 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-10">
-          <div>
-            <div className="flex items-center gap-3 justify-center md:justify-start mb-4">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-white text-sm">t</div>
-              <span className="text-xl font-black text-white">techlearn<span className="text-indigo-600">.</span></span>
+      <footer className="bg-black border-t border-gray-900 py-20 mt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-12">
+            <div>
+              <div className="flex items-center gap-3 justify-center md:justify-start mb-4">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-white text-sm">t</div>
+                <span className="text-xl font-black text-white">techlearn<span className="text-indigo-600">.</span></span>
+              </div>
+              <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.5em] text-center md:text-left">Global Singularity Monitoring</p>
             </div>
-            <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.5em]">Global Singularity Monitoring</p>
+            <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-gray-500 flex-wrap justify-center">
+               <button onClick={() => handleNavigate('home')} className="hover:text-white transition-colors">Horizon</button>
+               <button onClick={() => handleNavigate('ai')} className="hover:text-white transition-colors">Neural</button>
+               <button onClick={() => handleNavigate('dev')} className="hover:text-white transition-colors">Syntax</button>
+               <button onClick={() => handleNavigate('future')} className="hover:text-white transition-colors">Beyond</button>
+               {isLoggedIn ? (
+                 <button onClick={() => handleNavigate('admin')} className="text-indigo-400">Dashboard</button>
+               ) : (
+                 <button onClick={() => handleNavigate('login')} className="hover:text-white transition-colors">Access</button>
+               )}
+            </div>
           </div>
-          <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-gray-500">
-             <button onClick={() => handleNavigate('home')} className="hover:text-white transition-colors">Index</button>
-             <button onClick={() => handleNavigate('ai')} className="hover:text-white transition-colors">Neural</button>
-             <button onClick={() => handleNavigate('dev')} className="hover:text-white transition-colors">Syntax</button>
-             <button onClick={() => handleNavigate('future')} className="hover:text-white transition-colors">Beyond</button>
+          <div className="mt-16 text-center text-[9px] font-bold text-gray-800 uppercase tracking-[0.8em]">
+            &copy; {new Date().getFullYear()} TECHLEARN SYSTEMS CORP
           </div>
         </div>
       </footer>

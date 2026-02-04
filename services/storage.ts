@@ -13,52 +13,47 @@ const DEFAULT_SETTINGS: AppSettings = {
   adSenseEnabled: true
 };
 
+const safeGet = (key: string, defaultValue: any) => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch (e) {
+    console.warn(`Storage read error for ${key}:`, e);
+    return defaultValue;
+  }
+};
+
+const safeSet = (key: string, value: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error(`Storage write error for ${key}:`, e);
+  }
+};
+
 export const storage = {
   getPosts: (): Post[] => {
-    const data = localStorage.getItem(POSTS_KEY);
-    if (!data) {
-      localStorage.setItem(POSTS_KEY, JSON.stringify(INITIAL_POSTS));
+    const posts = safeGet(POSTS_KEY, null);
+    if (!posts) {
+      safeSet(POSTS_KEY, INITIAL_POSTS);
       return INITIAL_POSTS;
     }
-    return JSON.parse(data);
+    return posts;
   },
-  savePosts: (posts: Post[]) => {
-    localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
-  },
+  savePosts: (posts: Post[]) => safeSet(POSTS_KEY, posts),
   getAds: (): Ad[] => {
-    const data = localStorage.getItem(ADS_KEY);
-    if (!data) {
-      localStorage.setItem(ADS_KEY, JSON.stringify(INITIAL_ADS));
+    const ads = safeGet(ADS_KEY, null);
+    if (!ads) {
+      safeSet(ADS_KEY, INITIAL_ADS);
       return INITIAL_ADS;
     }
-    return JSON.parse(data);
+    return ads;
   },
-  saveAds: (ads: Ad[]) => {
-    localStorage.setItem(ADS_KEY, JSON.stringify(ads));
-  },
-  getSettings: (): AppSettings => {
-    const data = localStorage.getItem(SETTINGS_KEY);
-    if (!data) {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(DEFAULT_SETTINGS));
-      return DEFAULT_SETTINGS;
-    }
-    return JSON.parse(data);
-  },
-  saveSettings: (settings: AppSettings) => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  },
-  setAuth: (isLoggedIn: boolean) => {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(isLoggedIn));
-  },
-  getAuth: (): boolean => {
-    const data = localStorage.getItem(AUTH_KEY);
-    return data ? JSON.parse(data) : false;
-  },
-  getLastAutoUpdate: (): number => {
-    const data = localStorage.getItem(LAST_AUTO_UPDATE_KEY);
-    return data ? JSON.parse(data) : 0;
-  },
-  setLastAutoUpdate: (timestamp: number) => {
-    localStorage.setItem(LAST_AUTO_UPDATE_KEY, JSON.stringify(timestamp));
-  }
+  saveAds: (ads: Ad[]) => safeSet(ADS_KEY, ads),
+  getSettings: (): AppSettings => safeGet(SETTINGS_KEY, DEFAULT_SETTINGS),
+  saveSettings: (settings: AppSettings) => safeSet(SETTINGS_KEY, settings),
+  setAuth: (isLoggedIn: boolean) => safeSet(AUTH_KEY, isLoggedIn),
+  getAuth: (): boolean => safeGet(AUTH_KEY, false),
+  getLastAutoUpdate: (): number => safeGet(LAST_AUTO_UPDATE_KEY, 0),
+  setLastAutoUpdate: (timestamp: number) => safeSet(LAST_AUTO_UPDATE_KEY, timestamp)
 };
