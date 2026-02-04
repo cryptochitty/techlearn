@@ -1,0 +1,7 @@
+{
+  "name": "techlearn",
+  "description": "A world-class technology news and education platform powered by autonomous AI trend analysis, featuring full administrative control and ad management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
