@@ -19,7 +19,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [tab, setTab] = useState<'posts' | 'ads' | 'settings'>('posts');
   const [editingPost, setEditingPost] = useState<Partial<Post> | null>(null);
-  const [editingAd, setEditingAd] = useState<Partial<Ad> | null>(null);
   const [settings, setSettings] = useState<AppSettings>(storage.getSettings());
 
   const handleSavePost = (e: React.FormEvent) => {
@@ -75,14 +74,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {tab === 'posts' && (
         <div className="bg-gray-900 border border-gray-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
           <div className="p-8 border-b border-gray-800 flex justify-between items-center">
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Content Repository</h3>
-            <button onClick={() => setEditingPost({})} className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-indigo-600/20">New Article</button>
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Repository</h3>
+            <button onClick={() => setEditingPost({})} className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-indigo-600/20 transition-all">New Entry</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-gray-800/20 border-b border-gray-800">
-                  <th className="p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Entry</th>
+                  <th className="p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Article Details</th>
                   <th className="p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">Status</th>
                   <th className="p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
                 </tr>
@@ -102,13 +101,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <td className="p-6 text-right space-x-2">
                       <button 
                         onClick={() => setEditingPost(post)} 
-                        className="px-4 py-1.5 bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
+                        className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all"
                       >
                         Edit
                       </button>
                       <button 
                         onClick={() => { if(confirm('Permanently delete entry?')) onUpdatePosts(posts.filter(p => p.id !== post.id)) }} 
-                        className="px-4 py-1.5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
+                        className="px-4 py-1.5 bg-gray-800 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
                       >
                         Delete
                       </button>
@@ -123,10 +122,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {tab === 'settings' && (
         <div className="bg-gray-900 border border-gray-800 rounded-[2.5rem] p-10 max-w-2xl">
-           <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8">Protocol Configuration</h3>
+           <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8">System Protocols</h3>
            <form onSubmit={handleSaveSettings} className="space-y-6">
              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">AdSense Client ID</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">AdSense Publisher ID</label>
                 <input 
                   type="text" 
                   value={settings.adSenseClientId} 
@@ -140,11 +139,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="checkbox" 
                   checked={settings.adSenseEnabled} 
                   onChange={e => setSettings({...settings, adSenseEnabled: e.target.checked})}
-                  className="w-5 h-5 accent-indigo-600 rounded bg-black border-gray-800"
+                  className="w-5 h-5 accent-indigo-600"
                 />
-                <span className="text-sm font-bold text-gray-300">Monetize with AdSense Units</span>
+                <span className="text-sm font-bold text-gray-300">Enable Ad Units</span>
              </div>
-             <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Save Config</button>
+             <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Synchronize</button>
            </form>
         </div>
       )}
@@ -173,12 +172,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Content (Markdown)</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Markdown Content</label>
                 <textarea rows={10} className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-gray-300 font-medium leading-relaxed outline-none focus:ring-1 focus:ring-indigo-500" value={editingPost.content || ''} onChange={e => setEditingPost({...editingPost, content: e.target.value})} />
               </div>
               <div className="flex items-center gap-4">
                 <input type="checkbox" checked={editingPost.published ?? true} onChange={e => setEditingPost({...editingPost, published: e.target.checked})} className="w-5 h-5 accent-indigo-600" />
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Publicly Accessible</span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Visible on Network</span>
               </div>
               <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-black text-white uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-600/20">Commit Changes</button>
             </form>

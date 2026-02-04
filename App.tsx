@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Post, Ad, View } from './types';
 import { storage } from './services/storage';
 import { Navbar } from './components/Navbar';
@@ -18,47 +18,29 @@ const App: React.FC = () => {
   const [lastAutoUpdate, setLastAutoUpdate] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize data safely
+  // Robust boot sequence
   useEffect(() => {
-    try {
-      const initialPosts = storage.getPosts();
-      const initialAds = storage.getAds();
-      const initialAuth = storage.getAuth();
-      const initialUpdate = storage.getLastAutoUpdate();
-      
-      setPosts(initialPosts);
-      setAds(initialAds);
-      setIsLoggedIn(initialAuth);
-      setLastAutoUpdate(initialUpdate);
-      setIsInitialized(true);
-    } catch (e) {
-      console.error("Critical initialization failure:", e);
-      setIsInitialized(true); // Proceed anyway to show empty/fallback state
-    }
+    const init = () => {
+      try {
+        const p = storage.getPosts();
+        const a = storage.getAds();
+        const auth = storage.getAuth();
+        const update = storage.getLastAutoUpdate();
+        
+        setPosts(p || []);
+        setAds(a || []);
+        setIsLoggedIn(auth || false);
+        setLastAutoUpdate(update || 0);
+        setIsInitialized(true);
+      } catch (err) {
+        console.error("Critical storage failure:", err);
+        setIsInitialized(true);
+      }
+    };
+    init();
   }, []);
 
-  // AdSense Injection
-  useEffect(() => {
-    if (!isInitialized) return;
-    try {
-      const settings = storage.getSettings();
-      if (settings.adSenseEnabled && settings.adSenseClientId) {
-        const existingScript = document.getElementById('adsense-script');
-        if (!existingScript) {
-          const script = document.createElement('script');
-          script.id = 'adsense-script';
-          script.async = true;
-          script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${settings.adSenseClientId}`;
-          script.crossOrigin = 'anonymous';
-          document.head.appendChild(script);
-        }
-      }
-    } catch (e) {
-      console.warn("AdSense setup bypassed", e);
-    }
-  }, [isInitialized]);
-
-  // AI Content Cycle
+  // AI Content Loop
   useEffect(() => {
     if (!isInitialized || posts.length === 0) return;
     
@@ -134,13 +116,21 @@ const App: React.FC = () => {
       ? posts.filter(p => p.published && p.category === categoryFilter)
       : posts.filter(p => p.published);
 
-    const themeColor = title === 'neural' ? 'indigo' : title === 'syntax' ? 'emerald' : title === 'beyond' ? 'purple' : 'indigo';
+    // Static mapping for theme colors to ensure Tailwind CDN detects them
+    const themeStyles = {
+      neural: 'text-indigo-600 group-hover:text-indigo-400 border-indigo-500/30',
+      syntax: 'text-emerald-600 group-hover:text-emerald-400 border-emerald-500/30',
+      beyond: 'text-purple-600 group-hover:text-purple-400 border-purple-500/30',
+      horizon: 'text-indigo-600 group-hover:text-indigo-400 border-indigo-500/30'
+    }[title] || 'text-indigo-600 group-hover:text-indigo-400 border-indigo-500/30';
+
+    const accentColor = themeStyles.split(' ')[0];
 
     return (
       <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
         <div className="border-b border-gray-900 pb-10">
           <h1 className="text-6xl font-black lowercase tracking-tighter text-white mb-2">
-            {title}<span className={`text-${themeColor}-600`}>.</span>
+            {title}<span className={accentColor}>.</span>
           </h1>
           <p className="text-gray-500 font-black uppercase tracking-[0.4em] text-[10px]">
             {tag}
@@ -152,7 +142,7 @@ const App: React.FC = () => {
             {filtered.map(post => (
               <article 
                 key={post.id} 
-                className={`group cursor-pointer bg-gray-900/30 border border-gray-800 rounded-[3rem] overflow-hidden hover:border-${themeColor}-500/30 transition-all duration-500`}
+                className={`group cursor-pointer bg-gray-900/30 border border-gray-800 rounded-[3rem] overflow-hidden hover:border-gray-700 transition-all duration-500`}
                 onClick={() => handleNavigate('post', { post })}
               >
                 <div className="aspect-[16/10] overflow-hidden relative">
@@ -164,10 +154,10 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="p-10">
-                  <span className={`text-[10px] font-black text-${themeColor}-400 uppercase tracking-widest block mb-3`}>
+                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3">
                     {new Date(post.createdAt).toDateString()}
                   </span>
-                  <h2 className={`text-2xl font-black text-white group-hover:text-${themeColor}-400 transition-colors leading-tight mb-4`}>
+                  <h2 className={`text-2xl font-black text-white group-hover:text-indigo-400 transition-colors leading-tight mb-4`}>
                     {post.title}
                   </h2>
                   <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{post.excerpt}</p>
@@ -177,14 +167,21 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="py-24 text-center bg-gray-900/10 border border-dashed border-gray-800 rounded-[3rem]">
-            <p className="text-gray-600 font-black uppercase tracking-widest text-xs">Archives currently quiet.</p>
+            <p className="text-gray-600 font-black uppercase tracking-widest text-xs">Repository empty.</p>
           </div>
         )}
       </div>
     );
   };
 
-  if (!isInitialized) return <div className="min-h-screen bg-[#050505] flex items-center justify-center font-black text-white tracking-widest uppercase text-xs">Syncing Terminal...</div>;
+  if (!isInitialized) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="font-black text-white tracking-widest uppercase text-[10px]">Syncing Terminal...</div>
+      </div>
+    </div>
+  );
 
   const headerAd = ads.find(a => a.position === 'header' && a.active);
 
@@ -235,13 +232,13 @@ const App: React.FC = () => {
 
       <footer className="bg-black border-t border-gray-900 py-20 mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-12">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-12 text-center md:text-left">
             <div>
-              <div className="flex items-center gap-3 justify-center md:justify-start mb-4">
+              <div className="flex items-center gap-3 mb-4 justify-center md:justify-start">
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-white text-sm">t</div>
                 <span className="text-xl font-black text-white">techlearn<span className="text-indigo-600">.</span></span>
               </div>
-              <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.5em] text-center md:text-left">Global Singularity Monitoring</p>
+              <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.5em]">Global Singularity Monitoring</p>
             </div>
             <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-gray-500 flex-wrap justify-center">
                <button onClick={() => handleNavigate('home')} className="hover:text-white transition-colors">Horizon</button>
